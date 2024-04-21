@@ -45,10 +45,12 @@
     "lint:prettier": "prettier --check .",
     "test": "vitest",
     "pree2e": "npm run build",
-    "e2e": "npm -w e2e/esm -w e2e/cjs run start"
+    "e2e": "npm -w e2e/esm -w e2e/cjs run start",
+    "run": "tsx faker.ts"
   },
   "prettier": "@mizdra/prettier-config-mizdra",
   "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typescript": "^4.0.1",
     "@mizdra/eslint-config-mizdra": "^2.0.0",
@@ -58,6 +60,7 @@
     "@types/eslint": "^8.44.2",
     "@types/node": "^20.5.1",
     "@vitest/browser": "^1.3.1",
+    "dts-bundle-generator": "^9.5.0",
     "eslint": "^8.47.0",
     "graphql": "^16.8.1",
     "npm-run-all": "^4.1.5",

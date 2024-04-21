@@ -14,14 +14,76 @@ function isObjectTypeInfo(x: TypeInfo): x is ObjectTypeInfo {
 describe('getTypeInfos', () => {
   it('returns typename and field names', () => {
     const schema = buildSchema(`
+    
+"""
+@example provides examples of fake data.
+"""
+type FakeData {
+    type: ExampleType!
+    lang: String!
+}
+directive @example(
+    """
+    The type and lang of the fake data.
+    """
+    fake: FakeData
+    """
+    The format of the fake data.
+    """
+    pattern: String
+) on FIELD_DEFINITION | ARGUMENT_DEFINITION
+
+"""
+ExampleType represents the type of an example.
+"""
+enum ExampleType {
+    """
+    日本の住所
+    """
+    JA_ADDRESS
+    """
+    日本の都道府県
+    """
+    JA_PREFECTURE
+
+    """
+    電話番号
+    """
+    PHONE_NUMBER
+
+    """
+    姓名
+    """
+    NAME
+
+    """
+    EMAIL represents the format of an email address.
+    """
+    EMAIL
+
+    """
+    IP represents the format of an IP address.
+    """
+    IP
+
+    """
+    URI represents the format of a URI.
+    """
+    URI
+
+    """
+    UUID represents the format of a UUID.
+    """
+    UUID
+}
       type Book {
         id: ID!
-        title: String!
+        title: String! 
         author: Author!
       }
       type Author {
         id: ID!
-        name: String!
+        name: String! @example(fake: {type: NAME, lang: "ja"})
         books: [Book!]!
       }
     `);
