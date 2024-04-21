@@ -14,78 +14,103 @@ function isObjectTypeInfo(x: TypeInfo): x is ObjectTypeInfo {
 describe('getTypeInfos', () => {
   it('returns typename and field names', () => {
     const schema = buildSchema(`
-    
-"""
-@example provides examples of fake data.
-"""
-type FakeData {
-    type: ExampleType!
-    lang: String!
+type Book {
+  id: ID!
+  title: String!
+  title2: String
+  author: Author!
 }
-directive @example(
-    """
-    The type and lang of the fake data.
-    """
-    fake: FakeData
-    """
-    The format of the fake data.
-    """
-    pattern: String
-) on FIELD_DEFINITION | ARGUMENT_DEFINITION
-
-"""
-ExampleType represents the type of an example.
-"""
-enum ExampleType {
-    """
-    日本の住所
-    """
-    JA_ADDRESS
-    """
-    日本の都道府県
-    """
-    JA_PREFECTURE
-
-    """
-    電話番号
-    """
-    PHONE_NUMBER
-
-    """
-    姓名
-    """
-    NAME
-
-    """
-    EMAIL represents the format of an email address.
-    """
-    EMAIL
-
-    """
-    IP represents the format of an IP address.
-    """
-    IP
-
-    """
-    URI represents the format of a URI.
-    """
-    URI
-
-    """
-    UUID represents the format of a UUID.
-    """
-    UUID
+type Author {
+  id: ID!
+  money: Int! @faker_finance_amount(min: 1000, max: 10000)
+  bookssss: [Book!]!
 }
-      type Book {
-        id: ID!
-        title: String! 
-        author: Author!
-      }
-      type Author {
-        id: ID!
-        name: String! @example(fake: {type: NAME, lang: "ja"})
-        books: [Book!]!
-      }
+
+directive @faker_finance_accountName on FIELD_DEFINITION
+directive @faker_finance_accountNumber(
+  """
+  The length of the account number.
+  """
+  length: Int
+) on FIELD_DEFINITION
+directive @faker_finance_amount(
+  """
+  If true this method will use Number.toLocaleString(). Otherwise it will use Number.toFixed().
+  """
+  autoFormat: Boolean
+  """
+  The number of decimal places for the amount.
+  """
+  dec: Int
+  """
+  The upper bound for the amount.
+  """
+  max: Int
+  """
+  The lower bound for the amount.
+  """
+  min: Int
+  """
+  The symbol used to prefix the amount.
+  """
+  symbol: String
+) on FIELD_DEFINITION
+directive @faker_finance_bic(
+  """
+  Whether to include a three-digit branch code at the end of the generated code.
+  """
+  includeBranchCode: Boolean
+) on FIELD_DEFINITION
+directive @faker_finance_bitcoinAddress on FIELD_DEFINITION
+directive @faker_finance_creditCardCVV on FIELD_DEFINITION
+directive @faker_finance_creditCardIssuer on FIELD_DEFINITION
+directive @faker_finance_creditCardNumber(
+  """
+  The name of the issuer (case-insensitive) or the format used to generate one.
+  """
+  issuer: String
+) on FIELD_DEFINITION
+directive @faker_finance_currency on FIELD_DEFINITION
+directive @faker_finance_currencyCode on FIELD_DEFINITION
+directive @faker_finance_currencyName on FIELD_DEFINITION
+directive @faker_finance_currencySymbol on FIELD_DEFINITION
+directive @faker_finance_ethereumAddress on FIELD_DEFINITION
+directive @faker_finance_iban(
+  """
+  The country code from which you want to generate an IBAN,
+  if none is provided a random country will be used.
+  """
+  countryCode: String
+  """
+  Return a formatted version of the generated IBAN.
+  """
+  formatted: Boolean
+) on FIELD_DEFINITION
+directive @faker_finance_litecoinAddress on FIELD_DEFINITION
+directive @faker_finance_maskedNumber(
+  """
+  Whether to prefix the numbers with an ellipsis.
+  """
+  ellipsis: Boolean
+  """
+  The length of the unmasked number.
+  """
+  length: Int
+  """
+  Whether to use surrounding parenthesis.
+  """
+  parens: Boolean
+) on FIELD_DEFINITION
+directive @faker_finance_pin(
+  """
+  The length of the PIN to generate.
+  """
+  length: Int
+) on FIELD_DEFINITION
+directive @faker_finance_routingNumber on FIELD_DEFINITION
+directive @faker_finance_transactionDescription on FIELD_DEFINITION
+directive @faker_finance_transactionType on FIELD_DEFINITION
+
     `);
     const config: Config = fakeConfig();
     expect(getTypeInfos(config, schema)).toMatchInlineSnapshot(`

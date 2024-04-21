@@ -10,9 +10,10 @@ import {
     InputValueDefinitionNode,
     UnionTypeDefinitionNode,
     InterfaceTypeDefinitionNode,
-    ConstValueNode,
+    ConstValueNode, NonNullTypeNode,
 } from 'graphql';
 import { Config } from './config.js';
+import { ListTypeNode, NamedTypeNode } from "graphql/language/ast.js";
 
 // The fork of https://github.com/dotansimha/graphql-code-generator/blob/e1dc75f3c598bf7f83138ca533619716fc73f823/packages/plugins/typescript/resolvers/src/visitor.ts#L85-L91
 function clearOptional(str: string): string {
@@ -98,89 +99,108 @@ function valueOf(value: ConstValueNode): ValuePrimitive | ValueArray | ValueObje
     throw new Error(`Unknown kind of value ${value satisfies never}`)
 }
 
-export type ExampleDirectiveFake = {
-    fake: {
-        type: string
-        lang: string
-    }
-};
-export type ExampleDirectivePattern = {
-    pattern: string
-};
-export type ExampleDirectiveValues = {
-    values: (ValuePrimitive | ValueArray | ValueObject)[]
-};
-export type ExampleDirective = ExampleDirectiveFake | ExampleDirectivePattern | ExampleDirectiveValues;
+export type FakerDirective = {
+    methodName: string
+    options: Record<string, any>
+} | {
+    function: string
+}
 
 function parseFieldOrInputValueDefinition(
     node: FieldDefinitionNode | InputValueDefinitionNode,
     convertedTypeName: string,
     config: Config,
     userDefinedTypeNames: string[],
-): { typeString: string; comment: string | undefined, example?: ExampleDirective | undefined } {
+): { typeString: string; comment: string | undefined, faker?: FakerDirective | undefined } {
     const comment = node.description ? transformComment(node.description) : undefined;
-    const exampleDirective = node.directives?.find(d => d.name.value === "example");
+    const fakerDirective = node.directives?.find(d => d.name.value.startsWith("faker_"));
     // fake
-    const example = ((): ExampleDirective | undefined => {
-        if (!exampleDirective) {
-            return undefined
-        }
-        if (!exampleDirective.arguments) {
-            throw new Error("@example directive must have arguments")
-        }
-        /**
-         * @example(fake: {type: ENUM, lang: "ja"})
-         * -> { fake: { type: "ENUM", lang: "ja" }}
-         * @example(pattern: "string")
-         * -> { pattern: "string" }
-         * @example(values: ["a", "b", "c"])
-         * -> { values: ["a", "b", "c"] }
-         */
-        const fake = exampleDirective.arguments.find(a => a.name.value === "fake");
-        if (fake) {
-            // should be ObjectValue
-            if (fake.value.kind !== Kind.OBJECT) {
-                throw new Error("@example(fake: { type: ENUM, lang: 'ja'}) must have object value")
-            }
-            const typeValue = fake.value.fields.find(f => f.name.value === "type")?.value;
-            if (typeValue?.kind !== Kind.ENUM) {
-                throw new Error("@example(fake: { type: ENUM, lang: 'ja'}) must have type field")
-            }
-            const langValue = fake.value.fields.find(f => f.name.value === "lang")?.value;
-            if (langValue?.kind !== Kind.STRING) {
-                throw new Error("@example(fake: { type: ENUM, lang: 'ja'}) must have lang field")
-            }
-            return {
-                fake: {
-                    type: typeValue.value,
-                    lang: langValue.value,
+    const faker = ((): FakerDirective | undefined => {
+        if (!fakerDirective) {
+            const typeToFunction = (type: string): string => {
+                switch (type) {
+                    case "String":
+                        return "faker.word.sample()"
+                    case "Int":
+                        return "faker.number.int()"
+                    case "Float":
+                        return "faker.number.float()"
+                    case "Boolean":
+                        return "faker.random.boolean()"
+                    case "ID":
+                        return "faker.string.uuid()"
+                    default:
+                        return `get${convertedTypeName}Factory().build()` // TODO: add new type to FakerDirective?
                 }
             }
-        }
-        const pattern = exampleDirective.arguments.find(a => a.name.value === "pattern");
-        if (pattern) {
-            if (pattern.value.kind !== Kind.STRING) {
-                throw new Error("@example(pattern: 'string') must have string value")
+            const typeToFunctionWithArray = (type: string): string => {
+                switch (type) {
+                    case "String":
+                        return `faker.helpers.arrayElements(Array.from({ length: 10 }).map(() => ${typeToFunction(type)}))`
+                    case "Int":
+                        return `faker.helpers.arrayElements(Array.from({ length: 10 }).map(() => ${typeToFunction(type)}))`
+                    case "Float":
+                        return `faker.helpers.arrayElements(Array.from({ length: 10 }).map(() => ${typeToFunction(type)}))`
+                    case "Boolean":
+                        return `faker.helpers.arrayElements(Array.from({ length: 10 }).map(() => ${typeToFunction(type)}))`
+                    case "ID":
+                        return `faker.helpers.arrayElements(Array.from({ length: 10 }).map(() => ${typeToFunction(type)}))`
+                    default:
+                        return `get${convertedTypeName}Factory().buildList(10)`
+                }
             }
+            // NamedType/ListType handling
+            const nodeToFunction = (node: NonNullTypeNode | NamedTypeNode | ListTypeNode, isArray = false): {
+                function: string
+            } => {
+                if (node.kind === "NonNullType") {
+                    return nodeToFunction(node.type, isArray);
+                } else if (node.kind === "NamedType") {
+                    if (isArray) {
+                        return {
+                            function: typeToFunctionWithArray(node.name.value)
+                        }
+                    } else {
+                        return {
+                            function: typeToFunction(node.name.value)
+                        }
+                    }
+                } else if (node.kind === "ListType") {
+                    return nodeToFunction(node.type, true)
+                }
+                throw new Error("Unknown node kind")
+            }
+            // basic graphql scalar
+            return nodeToFunction(node.type);
+        }
+        if (!fakerDirective) {
+            return undefined
+        }
+        if (!fakerDirective.arguments) {
             return {
-                pattern: pattern.value.value
+                methodName: fakerDirective.name.value.replace(/_/g, "."),
+                options: {}
             }
         }
-        const values = exampleDirective.arguments.find(a => a.name.value === "values");
-        if (values) {
-            if (values.value.kind !== Kind.LIST) {
-                throw new Error("@example(values: ['a', 'b', 'c']) must have list value")
-            }
-            return {
-                values: values.value.values.map(v => valueOf(v))
-            }
+        /**
+         * @efaker_[method_name](args)
+         */
+        return {
+            methodName: fakerDirective.name.value.replace(/_/g, "."),
+            options: fakerDirective.arguments.reduce((acc, arg) => {
+                if (arg.name.value.startsWith("faker_")) {
+                    return acc
+                }
+                acc[arg.name.value] = valueOf(arg.value)
+                return acc
+            }, {} as Record<string, any>)
+
         }
-        throw new Error("@example directive must have fake or pattern or values argument")
-    })()
+    })();
     if (isTypeBasedOnUserDefinedType(node.type, userDefinedTypeNames)) {
-        return { typeString: `${parseTypeNode(node.type, config)} | undefined`, comment, example };
+        return { typeString: `${parseTypeNode(node.type, config)} | undefined`, comment, faker };
     } else {
-        return { typeString: `${convertedTypeName}['${node.name.value}'] | undefined`, comment, example };
+        return { typeString: `${convertedTypeName}['${node.name.value}'] | undefined`, comment, faker };
     }
 }
 
@@ -213,7 +233,7 @@ function parseObjectTypeOrInputObjectTypeDefinition(
 
 type FieldInfo = {
     name: string; typeString: string; comment?: string | undefined;
-    example?: ExampleDirective | undefined;
+    faker?: FakerDirective | undefined;
 }
 export type ObjectTypeInfo = {
     type: 'object';
@@ -226,7 +246,7 @@ export type AbstractTypeInfo = {
     name: string;
     possibleTypes: string[];
     comment?: string | undefined;
-    example?: ExampleDirective | undefined
+    faker?: FakerDirective | undefined
 };
 export type TypeInfo = ObjectTypeInfo | AbstractTypeInfo;
 

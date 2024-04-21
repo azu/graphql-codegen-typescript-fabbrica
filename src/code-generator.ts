@@ -1,12 +1,7 @@
 import { Config } from './config.js';
-import {
-    ExampleDirectiveFake,
-    ExampleDirectivePattern,
-    ExampleDirectiveValues,
-    ObjectTypeInfo,
-    TypeInfo
-} from './schema-scanner.js';
+import { FakerDirective, ObjectTypeInfo, TypeInfo } from './schema-scanner.js';
 import "@faker-js/faker"
+
 function generatePreludeCode(config: Config, typeInfos: TypeInfo[]): string {
     const joinedTypeNames = typeInfos
         .filter(({ type }) => type === 'object')
@@ -68,57 +63,41 @@ export const define${name}Factory: DefineTypeFactoryInterface${nonOptionalDefaul
 `.trimStart();
 }
 
-// export type ExampleDirectiveFake = {
-//   fake: {
-//     type: string
-//     lang: string
-//   }
-// };
-// export type ExampleDirectivePattern = {
-//   pattern: string
-// };
-// export type ExampleDirectiveValues = {
-//   values: (ValuePrimitive | ValueArray | ValueObject)[]
-// };
-const handleFake = (example: ExampleDirectiveFake) => {
-    return `faker.${example.fake.type}()`;
-};
-const handlePattern = (example: ExampleDirectivePattern) => {
-    return `faker.random.alphaNumeric(${example.pattern.length})`;
-}
-const handleValues = (example: ExampleDirectiveValues) => {
-    return `faker.random.arrayElement(${example.values.map((value) => value).join(', ')})`;
-}
-const handleExample = (example: ExampleDirectiveFake | ExampleDirectivePattern | ExampleDirectiveValues) => {
-    if ('fake' in example) {
-        return handleFake(example);
-    } else if ('pattern' in example) {
-        return handlePattern(example);
-    } else if ('values' in example) {
-        return handleValues(example);
+const handleFaker = (faker: FakerDirective): string => {
+    if ("methodName" in faker && "options" in faker) {
+        const options = faker.options ? `${JSON.stringify(faker.options)}` : '';
+        return `dynamic(() => ${faker.methodName}(${options}))`;
+    } else if ("function" in faker) {
+        return `dynamic(() => ${faker.function})`;
     }
-    throw new Error('Unknown example directive');
+    throw new Error('Invalid faker directive' + JSON.stringify(faker));
 }
 
 export function generateDefaultFactory(_: Config, typeInfo: ObjectTypeInfo): string {
     const { name } = typeInfo;
+    // get${name}Factory is for avoiding TS circular dependencies error
+    // https://github.com/Quramy/prisma-fabbrica#suppress-ts-circular-dependencies-error
     return `
 /**
  * Factory for {@link ${name}} model.
  */
 export const ${name}Factory = define${name}Factory({
   defaultFields: {
-    ${typeInfo.fields
+${typeInfo.fields
         // name: dynamic(() => faker.name.findName()),
-        .flatMap(({ name,example }) => {
-            if(!example) {
+        .flatMap(({ name, faker }) => {
+            if (!faker) {
                 return [];
             }
-            return [`${name}: dynamic(() => ${handleExample(example)})`];
+            return [`    ${name}: ${handleFaker(faker)}`];
         })
         .join(',\n')}
   },
-});`.trimStart();
+});
+function get${name}Factory(): { build: () => Optional${name}; buildList: (size: number) => Optional${name}[]; } {
+    return ${name}Factory as unknown as { build: () => Optional${name}; buildList: (size: number) => Optional${name}[]; };
+}
+`.trimStart();
 }
 
 export function generateCode(config: Config, typeInfos: TypeInfo[]): string {
@@ -131,9 +110,23 @@ export function generateCode(config: Config, typeInfos: TypeInfo[]): string {
         if (typeInfo.type === 'object') {
             code += generateTypeFactoryCode(config, typeInfo);
             code += '\n';
-            code += generateDefaultFactory(config, typeInfo);
-            code += '\n';
         }
     }
     return code;
+}
+
+export function generateDefaultFactoryCode(config: Config, typeInfos: TypeInfo[], factoryFile:string): string {
+    const importDynamic = `import { dynamic } from '@mizdra/graphql-codegen-typescript-fabbrica/helper';`;
+    const allFactoryNames = typeInfos.map((typeInfo) => {
+        return `define${typeInfo.name}Factory`;
+    });
+    const allTypeName = typeInfos.map((typeInfo) => {
+        return `Optional${typeInfo.name}`;
+    })
+    const importFactory = `import { ${allFactoryNames.join(",")} } from '${factoryFile}';`;
+    const importTypes = `import type { ${allTypeName.join(",")} } from '${factoryFile}';`;
+    const objectTypes = typeInfos.filter((typeInfo) => typeInfo.type === 'object') as ObjectTypeInfo[];
+    const importFaker = `import {faker } from '@faker-js/faker';`
+    return `${importDynamic}\n${importTypes}\n${importFactory}\n${importFaker}
+${objectTypes.map((typeInfo) => generateDefaultFactory(config, typeInfo)).join('\n')}`;
 }

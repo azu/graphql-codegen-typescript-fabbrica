@@ -62,12 +62,13 @@ describe('generateCode', () => {
                 fields: [
                     { name: 'id', typeString: 'string | undefined' },
                     {
-                        name: 'name', typeString: 'string | undefined', example: {
-                            fake: {
-                                type: "date",
-                                lang: "ja"
-                            }
-                        }
+                        name: 'name', typeString: 'string | undefined', "faker": {
+                            "methodName": "faker.finance.amount",
+                            "options": {
+                                "max": 10000,
+                                "min": 1000,
+                            },
+                        },
                     },
                     { name: 'books', typeString: 'Book[] | undefined' },
                 ],

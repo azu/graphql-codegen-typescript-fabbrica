@@ -1,4 +1,4 @@
-import { finance } from "./finance.js";
+import { helper } from "./helpers.json.js";
 
 type GraphQLBasicScalar = "String" | "Boolean" | "Int" | "Float" | "ID";
 type DirectiveInfo = {
@@ -63,12 +63,41 @@ const parametersToOptions = (parameters: FakeAPIDefinition["parameters"]): Direc
         if (parameter.type === "{ ... }") {
             return;
         }
+        if (parameter.type === "Array<{ ... }>") {
+            return;
+        }
+
+        if (parameter.type === "T") {
+            return;
+        }
+        if (/\(.*\)/.test(parameter.type)) {
+            return;
+        }
+        // Record<string, T>
+        if (/Record<.*>/.test(parameter.type)) {
+            return;
+        }
+        if (parameter.type.includes("T[]")) {
+            return;
+        }
+        if (/<.*>/.test(parameter.name)) {
+            return;
+        }
+
+        const isOptional = parameter.name.endsWith("?");
+        const nameWithoutParentObject = (parameter.name.split(".").pop() ?? parameter.name).replace("?", "");
+        // string | string[]
+        if (parameter.type === "string | string[]") {
+            return options.set(nameWithoutParentObject, {
+                optional: isOptional,
+                description: parameter.description,
+                type: "String",
+            });
+        }
         // TODO: union |  is not supported yet
         if (parameter.type.includes("|")) {
             return;
         }
-        const isOptional = parameter.name.endsWith("?");
-        const nameWithoutParentObject = (parameter.name.split(".").pop() ?? parameter.name).replace("?", "");
         // boolean
         if (parameter.type === "boolean") {
             return options.set(nameWithoutParentObject, {
@@ -94,11 +123,11 @@ const parametersToOptions = (parameters: FakeAPIDefinition["parameters"]): Direc
     });
     return Object.fromEntries(options);
 }
-Object.entries(finance).forEach(([key, value]) => {
+Object.entries(helper).forEach(([key, value]) => {
     // console.log(key, value)
     const directiveInfo: DirectiveInfo = {
         name: key,
-        moduleName: "finance",
+        moduleName: "helpers",
         options: parametersToOptions(value.parameters),
     };
     console.log(generateDirective(directiveInfo));

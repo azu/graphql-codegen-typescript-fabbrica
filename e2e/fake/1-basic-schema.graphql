@@ -1,0 +1,181 @@
+directive @faker_helpers_arrayElement on FIELD_DEFINITION
+directive @faker_helpers_arrayElements(
+  """
+  The maximum number of elements to pick.
+  """
+  max: Int!
+  """
+  The minimum number of elements to pick.
+  """
+  min: Int!
+) on FIELD_DEFINITION
+directive @faker_helpers_enumValue on FIELD_DEFINITION
+directive @faker_helpers_fake(
+  """
+  The pattern string that will get interpolated. If an array is passed, a random element will be picked and interpolated.
+  """
+  pattern: String!
+) on FIELD_DEFINITION
+directive @faker_helpers_fromRegExp on FIELD_DEFINITION
+directive @faker_helpers_maybe(
+  """
+  The probability ([0.00, 1.00]) of the callback being invoked.
+  """
+  probability: Int
+) on FIELD_DEFINITION
+directive @faker_helpers_multiple on FIELD_DEFINITION
+directive @faker_helpers_mustache(
+  """
+  The template string to parse.
+  """
+  str: String
+) on FIELD_DEFINITION
+directive @faker_helpers_objectEntry on FIELD_DEFINITION
+directive @faker_helpers_objectKey on FIELD_DEFINITION
+directive @faker_helpers_objectValue on FIELD_DEFINITION
+directive @faker_helpers_rangeToNumber(
+  """
+  The maximum value for the range.
+  """
+  max: Int!
+  """
+  The minimum value for the range.
+  """
+  min: Int!
+) on FIELD_DEFINITION
+directive @faker_helpers_replaceCreditCardSymbols(
+  """
+  The credit card format pattern.
+  """
+  string: String!
+  """
+  The symbol to replace with a digit.
+  """
+  symbol: String!
+) on FIELD_DEFINITION
+directive @faker_helpers_replaceSymbols(
+  """
+  The template string to parse.
+  """
+  string: String!
+) on FIELD_DEFINITION
+directive @faker_helpers_shuffle(
+  """
+  Whether to shuffle the array in place or return a new array.
+  """
+  inplace: Boolean
+) on FIELD_DEFINITION
+directive @faker_helpers_slugify(
+  """
+  The input to slugify.
+  """
+  string: String!
+) on FIELD_DEFINITION
+directive @faker_helpers_uniqueArray(
+  """
+  The number of elements to generate.
+  """
+  length: Int!
+) on FIELD_DEFINITION
+directive @faker_helpers_weightedArrayElement(
+  """
+  The weight of the value.
+  """
+  weight: Int!
+) on FIELD_DEFINITION
+
+
+type Book {
+  id: ID!
+  title: String! @faker_helpers_fake(pattern: "{{person.lastName}}, {{person.firstName}} {{person.suffix}}")
+  author: Author!
+}
+type Author {
+  id: ID!
+  name: String!
+  books: [Book!]!
+}
+type User {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  fullName: String!
+}
+type Image {
+  id: ID!
+  url: String!
+  width: Int
+  height: Int
+}
+
+# NullableTest
+type NullableTest_Type {
+  field1: String
+  field2: [String]
+  field3: NullableTest_SubType
+  field4: [NullableTest_SubType]
+}
+type NullableTest_SubType {
+  field: String!
+}
+
+# InterfaceTest
+interface InterfaceTest_Interface {
+  id: ID!
+}
+type InterfaceTest_ImplementingType implements InterfaceTest_Interface {
+  id: ID!
+  field: String!
+}
+type InterfaceTest_TypeWithInterfaceField {
+  interface: InterfaceTest_Interface!
+}
+
+# UnionTest
+union UnionTest_Union = UnionTest_Member1 | UnionTest_Member2
+type UnionTest_Member1 {
+  field1: String!
+}
+type UnionTest_Member2 {
+  field2: String!
+}
+type UnionTest_Type {
+  union: UnionTest_Union!
+}
+
+# EnumTest
+type EnumTest_Type {
+  enum: EnumTest_Enum!
+}
+enum EnumTest_Enum {
+  VALUE1
+  VALUE2
+}
+
+# CustomScalarTest
+scalar CustomScalarTest_CustomScalar1
+scalar CustomScalarTest_CustomScalar2
+type CustomScalarTest_Type {
+  scalar1: CustomScalarTest_CustomScalar1!
+  scalar2: CustomScalarTest_CustomScalar2!
+}
+
+# InputTest
+input InputTest_Input {
+  field: String!
+}
+
+# NamingConventionTest
+type NamingConventionTest_Type {
+  field1: String!
+  field2: NamingConventionTest_SubType!
+}
+type NamingConventionTest_SubType {
+  field: String!
+}
+
+# NonOptionalDefaultFields
+type NonOptionalDefaultFields_OptionalDefaultFieldsType {
+  field1: String!
+  field2: String!
+}

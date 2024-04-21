@@ -27,6 +27,15 @@ const config: CodegenConfig = {
         ...defaultFabbricaPluginConfig,
       },
     },
+
+    './__generated__/1-basic/factory.ts': {
+      schema: './1-basic-schema.graphql',
+      plugins: ['@mizdra/graphql-codegen-typescript-fabbrica/index_def'],
+      config: {
+        ...defaultFabbricaPluginConfig,
+        factoryFile: "./fabbrica.js"
+      },
+    },
   },
 };
 

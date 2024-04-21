@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { defineAuthorFactory, defineBookFactory, dynamic } from './__generated__/1-basic/fabbrica.js';
+import { BookFactory } from "./__generated__/1-basic/factory.js";
 
 it('integration test', async () => {
   const BookFactory = defineBookFactory({
@@ -30,3 +31,20 @@ it('integration test', async () => {
     },
   });
 });
+
+it('integration default', async () => {
+  console.log("flow")
+  const book = await BookFactory.build({
+
+  });
+
+  expect(book).toStrictEqual({
+    id: 'Book-0',
+    title: 'ゆゆ式 0巻',
+    author: {
+      id: 'Author-0',
+      name: '0上小又',
+      books: undefined,
+    },
+  });
+})

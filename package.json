@@ -19,6 +19,16 @@
         "default": "./dist/cjs/index.cjs"
       }
     },
+    "./index_def": {
+        "import": {
+            "types": "./dist/esm/index_def.d.ts",
+            "default": "./dist/esm/index_def.js"
+        },
+        "require": {
+            "types": "./dist/cjs/index_def.d.cts",
+            "default": "./dist/cjs/index_def.cjs"
+        }
+    },
     "./helper": {
       "import": {
         "types": "./dist/esm/helper/index.d.ts",
@@ -46,7 +56,8 @@
     "test": "vitest",
     "pree2e": "npm run build",
     "e2e": "npm -w e2e/esm -w e2e/cjs run start",
-    "run": "tsx faker.ts"
+    "run": "tsx faker.ts",
+    "dts": "dts-bundle-generator --external-inlines=@faker-js/faker --out-file f.d.ts index.ts"
   },
   "prettier": "@mizdra/prettier-config-mizdra",
   "devDependencies": {
